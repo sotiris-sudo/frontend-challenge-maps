@@ -9,6 +9,7 @@ const COORDS = {
 class Main extends React.Component {
   state = {
     businesses: [],
+    foodCategory: "",
   };
 
   mapsApiLoaded = null;
@@ -55,11 +56,28 @@ class Main extends React.Component {
     }
   }
 
+  // clear markers from map
+  handleClearMarkers = (e) => {
+    console.log(e);
+  };
+
+  // select input is a controlled component. On category change
+  // update state with the new category
+  handleFoodCategoryChange = (e) => {
+    const {
+      target: { value },
+    } = e;
+    this.setState({ ...this.state, foodCategory: value });
+  };
+
   render() {
     return (
       <main>
-        <Filter>
-          <SelectInput />
+        <Filter onClear={this.handleClearMarkers}>
+          <SelectInput
+            onChange={this.handleFoodCategoryChange}
+            value={this.state.foodCategory}
+          />
         </Filter>
         <div id="places-map" className="places-map"></div>
         {this.state.businesses.map((business) => {
