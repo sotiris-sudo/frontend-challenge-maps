@@ -1,3 +1,7 @@
+## Notes
+I have used extensive commenting that I wouldn’t do in a real work environment, to explain my thought process.
+
+
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
 ## Getting started
