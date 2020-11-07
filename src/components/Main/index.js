@@ -96,7 +96,8 @@ class Main extends React.Component {
   }
 
   placeMarkersOnMap = () => {
-    if (this.mapInstance) {
+    // do not place markers if first option is selected from <SelectInput/>
+    if (this.mapInstance && this.state.foodCategory) {
       this.markers = this.state.businesses.map(
         ({ coordinates }) =>
           new window.google.maps.Marker({
@@ -147,6 +148,7 @@ class Main extends React.Component {
       .then((res) => {
         this.setState(
           { businesses: res.businesses || [], foodCategory: value },
+          // after state is set with the new businesses, place the new markers on map
           this.placeMarkersOnMap
         );
       })
