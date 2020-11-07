@@ -59,9 +59,9 @@ class Main extends React.Component {
     }
   }
 
-  placeMarkersOnMap = (businesses) => {
+  placeMarkersOnMap = () => {
     if (this.mapInstance) {
-      this.markers = businesses.map(
+      this.markers = this.state.businesses.map(
         ({ coordinates }) =>
           new window.google.maps.Marker({
             map: this.mapInstance,
@@ -76,9 +76,27 @@ class Main extends React.Component {
     }
   };
 
-  // clear markers from map
-  handleClearMarkers = (e) => {
-    this.markers = this.markers.map((marker) => marker.setMap(null));
+  // clears markers from map. It first checks if there is a mapInstance,
+  // and if we have any markers on map. If we don't have any markers then
+  // there is no need to do the extra loop
+  clearMarkers = () => {
+    if (this.mapInstance && this.markers.length > 0) {
+      this.markers.map((marker) => marker.setMap(null));
+      this.markers = [];
+    }
+  };
+
+  // button clear handler. fetches a fresh list of restaurants without category
+  // and then clears the markers from map
+  handleClearMarkers = () => {
+    this.fetchRestaurants()
+      .then((res) => {
+        this.setState(
+          { businesses: res.businesses || [], foodCategory: "" },
+          this.clearMarkers
+        );
+      })
+      .catch((err) => console.error(err));
   };
 
   // select input is a controlled component. On category change
@@ -87,12 +105,13 @@ class Main extends React.Component {
     const {
       target: { value },
     } = e;
-
+    // before changing category we need to clear the old markers from map
+    this.clearMarkers();
     this.fetchRestaurants(value)
       .then((res) => {
         this.setState(
           { businesses: res.businesses || [], foodCategory: value },
-          () => this.placeMarkersOnMap(res.businesses)
+          this.placeMarkersOnMap
         );
       })
       .catch((err) => console.error(err));
