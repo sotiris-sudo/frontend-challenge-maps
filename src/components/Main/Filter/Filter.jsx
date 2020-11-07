@@ -1,5 +1,6 @@
 import React from "react";
 import PropTypes from "prop-types";
+import "./Filter.css";
 
 /**
  * Filter component which acts as a container for possible future filter inputs
@@ -11,10 +12,10 @@ import PropTypes from "prop-types";
  * avoid prop drilling effect
  */
 const Filter = ({ children, onClear }) => (
-  <div>
+  <section className="filter-container">
     {children}
     <button onClick={onClear}>Clear</button>
-  </div>
+  </section>
 );
 
 Filter.propTypes = {

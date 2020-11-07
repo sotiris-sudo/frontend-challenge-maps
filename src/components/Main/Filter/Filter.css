@@ -1,0 +1,10 @@
+.filter-container {
+  padding: 4px;
+  margin: 8px;
+}
+.filter-container > * {
+  margin-right: 16px;
+}
+.filter-container :last-child {
+  margin-right: 0;
+}
