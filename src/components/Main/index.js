@@ -6,6 +6,27 @@ const COORDS = {
   "Europe/Berlin": { lat: 52.518611, lng: 13.408333 },
 };
 
+/**
+ * This is taken as is from https://reactjs.org/blog/2015/12/16/ismounted-antipattern.html
+ */
+const makeCancelable = (promise) => {
+  let hasCanceled_ = false;
+
+  const wrappedPromise = new Promise((resolve, reject) => {
+    promise.then(
+      (val) => (hasCanceled_ ? reject({ isCanceled: true }) : resolve(val)),
+      (error) => (hasCanceled_ ? reject({ isCanceled: true }) : reject(error))
+    );
+  });
+
+  return {
+    promise: wrappedPromise,
+    cancel() {
+      hasCanceled_ = true;
+    },
+  };
+};
+
 class Main extends React.Component {
   state = {
     businesses: [],
@@ -16,14 +37,29 @@ class Main extends React.Component {
   markers = [];
   mapsApiLoaded = null;
   mapInstance = null;
+  fetchRestaurantsPromise = null;
 
   componentDidMount() {
-    this.fetchRestaurants()
+    /*
+     * It seems that this is causing a memory leak that I discovered during testing.
+     * This happens because component tries to set state when the component unmounts.
+     * To verify, remove the makeCancelable wrapper, and run the test from this file
+     * src/main/index.test.js
+     * The solution found, according to the docs
+     * in https://reactjs.org/blog/2015/12/16/ismounted-antipattern.html, is to cancel the promise when the component unmounts
+     */
+    this.fetchRestaurantsPromise = makeCancelable(this.fetchRestaurants());
+
+    this.fetchRestaurantsPromise.promise
       .then((res) => this.setState({ businesses: res.businesses || [] }))
       .catch((err) => console.log(err));
 
     this.mapsApiLoaded = window.setTimeout(this.checkMapsApi.bind(this), 200);
   }
+
+  componentWillUnmount = () => {
+    this.fetchRestaurantsPromise.cancel();
+  };
 
   fetchRestaurants = async (category) => {
     const query = {
@@ -129,7 +165,11 @@ class Main extends React.Component {
         <div id="places-map" className="places-map"></div>
         {this.state.businesses.map((business) => {
           return (
-            <div className="card" key={business.id}>
+            <div
+              className="card"
+              key={business.id}
+              data-testid="restaurantCard"
+            >
               <img src={business.image_url} alt={business.name} />
               <div className="container">
                 <h4>
