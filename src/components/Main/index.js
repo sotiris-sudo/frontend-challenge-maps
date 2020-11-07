@@ -12,6 +12,8 @@ class Main extends React.Component {
     foodCategory: "",
   };
 
+  // keep a markers reference here so we can clear them later
+  markers = [];
   mapsApiLoaded = null;
   mapInstance = null;
 
@@ -23,11 +25,12 @@ class Main extends React.Component {
     this.mapsApiLoaded = window.setTimeout(this.checkMapsApi.bind(this), 200);
   }
 
-  fetchRestaurants = async () => {
+  fetchRestaurants = async (category) => {
     const query = {
       limit: 50,
       location: "Berlin, Germany",
       term: "restaurants",
+      ...(category ? { categories: category } : {}),
     };
     const urlParams = new URLSearchParams(query);
     const response = await fetch(`/-/search?${urlParams}`);
@@ -56,9 +59,26 @@ class Main extends React.Component {
     }
   }
 
+  placeMarkersOnMap = (businesses) => {
+    if (this.mapInstance) {
+      this.markers = businesses.map(
+        ({ coordinates }) =>
+          new window.google.maps.Marker({
+            map: this.mapInstance,
+            position: {
+              lat: coordinates.latitude,
+              lng: coordinates.longitude,
+            },
+          })
+      );
+    } else {
+      // handle map instance not there error
+    }
+  };
+
   // clear markers from map
   handleClearMarkers = (e) => {
-    console.log(e);
+    this.markers = this.markers.map((marker) => marker.setMap(null));
   };
 
   // select input is a controlled component. On category change
@@ -67,7 +87,15 @@ class Main extends React.Component {
     const {
       target: { value },
     } = e;
-    this.setState({ ...this.state, foodCategory: value });
+
+    this.fetchRestaurants(value)
+      .then((res) => {
+        this.setState(
+          { businesses: res.businesses || [], foodCategory: value },
+          () => this.placeMarkersOnMap(res.businesses)
+        );
+      })
+      .catch((err) => console.error(err));
   };
 
   render() {
