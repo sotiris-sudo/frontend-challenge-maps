@@ -1,5 +1,5 @@
 import React from "react";
-
+import { Filter, SelectInput } from "./Filter";
 import "./Main.css";
 
 const COORDS = {
@@ -58,6 +58,9 @@ class Main extends React.Component {
   render() {
     return (
       <main>
+        <Filter>
+          <SelectInput />
+        </Filter>
         <div id="places-map" className="places-map"></div>
         {this.state.businesses.map((business) => {
           return (
