@@ -6,6 +6,8 @@ const COORDS = {
   "Europe/Berlin": { lat: 52.518611, lng: 13.408333 },
 };
 
+const TRIES_TO_LOAD_MAP_BEFORE_FAILURE = 2;
+
 /**
  * This is taken as is from https://reactjs.org/blog/2015/12/16/ismounted-antipattern.html
  */
@@ -37,6 +39,7 @@ class Main extends React.Component {
   markers = [];
   mapsApiLoaded = null;
   mapInstance = null;
+  countTriesToLoadMap = 0;
   fetchRestaurantsPromise = null;
 
   componentDidMount() {
@@ -54,7 +57,13 @@ class Main extends React.Component {
       .then((res) => this.setState({ businesses: res.businesses || [] }))
       .catch((err) => console.log(err));
 
-    this.mapsApiLoaded = window.setTimeout(this.checkMapsApi.bind(this), 200);
+    /* Our goal should be to give user the information as fast as possible
+     * Considering that, instead of a timeout we can use an interval. The
+     * interval will check if map is loaded(same functionality as before),
+     * and will give up after 2 times.
+     * This way we can also be optimistic and start with 50ms
+     */
+    this.mapsApiLoaded = window.setInterval(this.checkMapsApi, 50);
   }
 
   componentWillUnmount = () => {
@@ -78,12 +87,23 @@ class Main extends React.Component {
     return body;
   };
 
-  checkMapsApi() {
-    if (window.google && window.google.maps) {
-      window.clearTimeout(this.mapsApiLoaded);
-      this.initMap();
+  checkMapsApi = () => {
+    if (this.countTriesToLoadMap === TRIES_TO_LOAD_MAP_BEFORE_FAILURE) {
+      window.clearInterval(this.mapsApiLoaded);
+      // instead of throwing an error maybe is better to set the state
+      // and show a message to the user
+      throw Error("giving up");
     }
-  }
+    if (window.google && window.google.maps) {
+      window.clearInterval(this.mapsApiLoaded);
+      this.initMap();
+    } else {
+      this.countTriesToLoadMap += 1;
+      console.log(
+        `attempt to load map failed, ${this.countTriesToLoadMap} times`
+      );
+    }
+  };
 
   initMap() {
     const mapEl = document.getElementById("places-map");
