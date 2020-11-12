@@ -1,5 +1,6 @@
 import React from "react";
 import { Filter, SelectInput } from "./Filter";
+import { makeCancelablePromise } from "../../helpers";
 import "./Main.css";
 
 const COORDS = {
@@ -7,27 +8,6 @@ const COORDS = {
 };
 
 const TRIES_TO_LOAD_MAP_BEFORE_FAILURE = 2;
-
-/**
- * This is taken as is from https://reactjs.org/blog/2015/12/16/ismounted-antipattern.html
- */
-const makeCancelable = (promise) => {
-  let hasCanceled_ = false;
-
-  const wrappedPromise = new Promise((resolve, reject) => {
-    promise.then(
-      (val) => (hasCanceled_ ? reject({ isCanceled: true }) : resolve(val)),
-      (error) => (hasCanceled_ ? reject({ isCanceled: true }) : reject(error))
-    );
-  });
-
-  return {
-    promise: wrappedPromise,
-    cancel() {
-      hasCanceled_ = true;
-    },
-  };
-};
 
 class Main extends React.Component {
   state = {
@@ -42,7 +22,7 @@ class Main extends React.Component {
   countTriesToLoadMap = 0;
   fetchRestaurantsPromise = null;
 
-  componentDidMount() {
+  componentDidMount = async () => {
     /*
      * It seems that this is causing a memory leak that I discovered during testing.
      * This happens because component tries to set state when the component unmounts.
@@ -51,11 +31,16 @@ class Main extends React.Component {
      * The solution found, according to the docs
      * in https://reactjs.org/blog/2015/12/16/ismounted-antipattern.html, is to cancel the promise when the component unmounts
      */
-    this.fetchRestaurantsPromise = makeCancelable(this.fetchRestaurants());
+    this.fetchRestaurantsPromise = makeCancelablePromise(
+      this.fetchRestaurants()
+    );
 
-    this.fetchRestaurantsPromise.promise
-      .then((res) => this.setState({ businesses: res.businesses || [] }))
-      .catch((err) => console.log(err));
+    try {
+      const result = await this.fetchRestaurantsPromise.promise;
+      this.setState({ businesses: result.businesses || [] });
+    } catch (err) {
+      this.handleError(err);
+    }
 
     /* Our goal should be to give user the information as fast as possible
      * Considering that, instead of a timeout we can use an interval. The
@@ -64,7 +49,7 @@ class Main extends React.Component {
      * This way we can also be optimistic and start with 50ms
      */
     this.mapsApiLoaded = window.setInterval(this.checkMapsApi, 50);
-  }
+  };
 
   componentDidUpdate = async (_, prevState) => {
     if (prevState.foodCategory !== this.state.foodCategory) {
@@ -80,13 +65,18 @@ class Main extends React.Component {
           }
         );
       } catch (e) {
-        console.log(e);
+        this.handleError(e);
       }
     }
   };
 
   componentWillUnmount = () => {
     this.fetchRestaurantsPromise.cancel();
+  };
+
+  handleError = (error) => {
+    // we could throw instead
+    console.log(error);
   };
 
   fetchRestaurants = async () => {
