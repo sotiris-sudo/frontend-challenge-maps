@@ -66,16 +66,37 @@ class Main extends React.Component {
     this.mapsApiLoaded = window.setInterval(this.checkMapsApi, 50);
   }
 
+  componentDidUpdate = async (_, prevState) => {
+    if (prevState.foodCategory !== this.state.foodCategory) {
+      try {
+        const result = await this.fetchRestaurants();
+        this.clearMarkers();
+        this.setState(
+          { ...this.state, businesses: result.businesses || [] },
+          () => {
+            if (this.state.foodCategory) {
+              this.placeMarkersOnMap();
+            }
+          }
+        );
+      } catch (e) {
+        console.log(e);
+      }
+    }
+  };
+
   componentWillUnmount = () => {
     this.fetchRestaurantsPromise.cancel();
   };
 
-  fetchRestaurants = async (category) => {
+  fetchRestaurants = async () => {
     const query = {
       limit: 50,
       location: "Berlin, Germany",
       term: "restaurants",
-      ...(category ? { categories: category } : {}),
+      ...(this.state.foodCategory
+        ? { categories: this.state.foodCategory }
+        : {}),
     };
     const urlParams = new URLSearchParams(query);
     const response = await fetch(`/-/search?${urlParams}`);
@@ -117,7 +138,7 @@ class Main extends React.Component {
 
   placeMarkersOnMap = () => {
     // do not place markers if first option is selected from <SelectInput/>
-    if (this.mapInstance && this.state.foodCategory) {
+    if (this.mapInstance) {
       this.markers = this.state.businesses.map(
         ({ coordinates }) =>
           new window.google.maps.Marker({
@@ -146,14 +167,7 @@ class Main extends React.Component {
   // button clear handler. fetches a fresh list of restaurants without category
   // and then clears the markers from map
   handleClearMarkers = () => {
-    this.fetchRestaurants()
-      .then((res) => {
-        this.setState(
-          { businesses: res.businesses || [], foodCategory: "" },
-          this.clearMarkers
-        );
-      })
-      .catch((err) => console.error(err));
+    this.setState({ ...this.state, foodCategory: "" });
   };
 
   // select input is a controlled component. On category change
@@ -162,17 +176,7 @@ class Main extends React.Component {
     const {
       target: { value },
     } = e;
-    // before changing category we need to clear the old markers from map
-    this.clearMarkers();
-    this.fetchRestaurants(value)
-      .then((res) => {
-        this.setState(
-          { businesses: res.businesses || [], foodCategory: value },
-          // after state is set with the new businesses, place the new markers on map
-          this.placeMarkersOnMap
-        );
-      })
-      .catch((err) => console.error(err));
+    this.setState({ ...this.state, foodCategory: value });
   };
 
   render() {
