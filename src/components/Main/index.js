@@ -25,7 +25,7 @@ class Main extends React.Component {
   componentDidMount = async () => {
     /*
      * It seems that this is causing a memory leak that I discovered during testing.
-     * This happens because component tries to set state when the component unmounts.
+     * This happens because component tries to set state when the component umounts.
      * To verify, remove the makeCancelable wrapper, and run the test from this file
      * src/main/index.test.js
      * The solution found, according to the docs
@@ -127,8 +127,7 @@ class Main extends React.Component {
   }
 
   placeMarkersOnMap = () => {
-    // do not place markers if first option is selected from <SelectInput/>
-    if (this.mapInstance) {
+    try {
       this.markers = this.state.businesses.map(
         ({ coordinates }) =>
           new window.google.maps.Marker({
@@ -139,8 +138,8 @@ class Main extends React.Component {
             },
           })
       );
-    } else {
-      // handle map instance not there error
+    } catch (e) {
+      this.handleError(e);
     }
   };
 
@@ -149,25 +148,19 @@ class Main extends React.Component {
   // there is no need to do the extra loop
   clearMarkers = () => {
     if (this.mapInstance && this.markers.length > 0) {
-      this.markers.map((marker) => marker.setMap(null));
+      this.markers.forEach((marker) => marker.setMap(null));
       this.markers = [];
     }
   };
 
   // button clear handler. fetches a fresh list of restaurants without category
   // and then clears the markers from map
-  handleClearMarkers = () => {
-    this.setState({ ...this.state, foodCategory: "" });
-  };
+  handleClearMarkers = () => this.setState({ ...this.state, foodCategory: "" });
 
   // select input is a controlled component. On category change
   // update state with the new category
-  handleFoodCategoryChange = (e) => {
-    const {
-      target: { value },
-    } = e;
+  handleFoodCategoryChange = ({ target: { value } }) =>
     this.setState({ ...this.state, foodCategory: value });
-  };
 
   render() {
     return (
